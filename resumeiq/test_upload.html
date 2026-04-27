@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resume Upload Test - InsightHR Nexus</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 700px;
+            width: 100%;
+            padding: 40px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .header p {
+            color: #666;
+            font-size: 14px;
+        }
+        .upload-zone {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+            margin-bottom: 20px;
+        }
+        .upload-zone:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+        .upload-zone.dragover {
+            border-color: #10b981;
+            background: #ecfdf5;
+        }
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        .upload-zone p {
+            color: #666;
+            margin: 10px 0;
+        }
+        .upload-zone .primary {
+            font-weight: 600;
+            color: #333;
+            font-size: 16px;
+        }
+        .upload-zone .secondary {
+            font-size: 13px;
+            color: #999;
+        }
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .btn:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .file-input {
+            display: none;
+        }
+        .file-status {
+            background: #f0f9ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        .file-status.show {
+            display: block;
+        }
+        .file-status h3 {
+            color: #1e40af;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .file-status p {
+            color: #1e3a8a;
+            font-size: 13px;
+            margin: 5px 0;
+        }
+        .logs {
+            background: #1a1a1a;
+            color: #00ff00;
+            border-radius: 6px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        .logs div {
+            margin: 3px 0;
+        }
+        .logs .info { color: #00ff00; }
+        .logs .warning { color: #ffaa00; }
+        .logs .error { color: #ff3333; }
+        .logs .success { color: #33ff33; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Resume Upload Test</h1>
+            <p>Test the file upload and analysis flow</p>
+        </div>
+
+        <div class="file-status" id="fileStatus">
+            <h3>📄 File Selected</h3>
+            <p id="fileName"></p>
+            <p id="fileSize"></p>
+        </div>
+
+        <form id="uploadForm" action="/analyze" method="POST" enctype="multipart/form-data">
+            <div class="upload-zone" id="uploadZone">
+                <div class="upload-icon">📁</div>
+                <p class="primary">Drag & drop your resume here</p>
+                <p class="secondary">or click to browse</p>
+                <p class="secondary">PDF, DOCX, or TXT · Max 10 MB</p>
+            </div>
+            <input type="file" id="resumeInput" name="resume" class="file-input" accept=".pdf,.docx,.txt" required>
+
+            <button type="submit" class="btn" id="analyzeBtn">
+                ✨ Analyze with AI
+            </button>
+            <button type="reset" class="btn" style="background: #e5e7eb; color: #333;">🔄 Clear</button>
+        </form>
+
+        <div class="logs" id="logs">
+            <div class="info">🔍 Console logs will appear here...</div>
+        </div>
+    </div>
+
+    <script>
+        const uploadZone = document.getElementById('uploadZone');
+        const fileInput = document.getElementById('resumeInput');
+        const uploadForm = document.getElementById('uploadForm');
+        const fileStatus = document.getElementById('fileStatus');
+        const logs = document.getElementById('logs');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+
+        // Logging utility
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = type;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logs.appendChild(logEntry);
+            logs.scrollTop = logs.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        // Clear logs and add initial message
+        function clearLogs() {
+            logs.innerHTML = '';
+            log('🔍 Ready to upload resume', 'info');
+        }
+        clearLogs();
+
+        // File input trigger function
+        function triggerFileInput() {
+            log('📁 Browse clicked - opening file dialog', 'info');
+            try {
+                fileInput.click();
+                log('✓ File dialog triggered', 'success');
+            } catch (e) {
+                log('❌ Failed to open dialog: ' + e.message, 'error');
+            }
+        }
+
+        // Click handlers
+        uploadZone.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            triggerFileInput();
+        }, true);
+
+        uploadZone.addEventListener('mousedown', (e) => {
+            if (e.button === 0) {
+                e.preventDefault();
+                triggerFileInput();
+            }
+        }, true);
+
+        // Keyboard support
+        uploadZone.setAttribute('role', 'button');
+        uploadZone.setAttribute('tabindex', '0');
+        uploadZone.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                triggerFileInput();
+            }
+        });
+
+        // Drag and drop
+        ['dragenter', 'dragover'].forEach(evt => {
+            uploadZone.addEventListener(evt, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadZone.classList.add('dragover');
+                log('🔄 Dragging over upload zone', 'info');
+            });
+        });
+
+        ['dragleave', 'drop'].forEach(evt => {
+            uploadZone.addEventListener(evt, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                uploadZone.classList.remove('dragover');
+            });
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                log(`📤 File dropped: ${files[0].name}`, 'success');
+                fileInput.files = files;
+                updateFileStatus(files[0]);
+            }
+        });
+
+        // File input change
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files[0]) {
+                const file = fileInput.files[0];
+                log(`✅ File selected: ${file.name}`, 'success');
+                updateFileStatus(file);
+            }
+        });
+
+        // Update file status display
+        function updateFileStatus(file) {
+            fileStatus.classList.add('show');
+            document.getElementById('fileName').textContent = `📄 ${file.name}`;
+            document.getElementById('fileSize').textContent = `📊 Size: ${formatFileSize(file.size)}`;
+            uploadZone.style.borderColor = '#10b981';
+            uploadZone.style.background = '#ecfdf5';
+        }
+
+        // Format file size
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1048576).toFixed(1) + ' MB';
+        }
+
+        // Form submission
+        uploadForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (!fileInput.files[0]) {
+                log('❌ No file selected!', 'error');
+                return;
+            }
+            log(`🚀 Submitting form with ${fileInput.files[0].name}...`, 'info');
+            analyzeBtn.disabled = true;
+            analyzeBtn.textContent = '⏳ Processing...';
+            
+            // Submit the form
+            setTimeout(() => {
+                uploadForm.submit();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

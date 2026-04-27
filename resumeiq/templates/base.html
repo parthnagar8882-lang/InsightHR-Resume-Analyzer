@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ session.get('theme', current_user.theme_pref if current_user.is_authenticated else 'light') }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="InsightHR — AI-Powered Resume Intelligence & Career Guidance Platform">
+    <title>{% block title %}InsightHR{% endblock %}</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+    <!-- html2pdf.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=2">
+
+    <!-- Prevent dark-mode flash: apply saved theme before paint -->
+    <script>
+        (function(){
+            var t = localStorage.getItem('insighthr_theme')
+                 || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            {% if current_user.is_authenticated %}
+            t = "{{ current_user.theme_pref }}" || t;
+            {% endif %}
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+
+    {% block head_extra %}{% endblock %}
+</head>
+<body data-settings-url="{{ url_for('settings') if current_user.is_authenticated else '' }}">
+<!-- Flash Messages -->
+<div class="flash-messages" id="flash-messages">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">
+                    <i class="fas {% if category == 'success' %}fa-check-circle{% elif category == 'danger' %}fa-times-circle{% elif category == 'warning' %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %}"></i>
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+</div>
+
+{% if current_user.is_authenticated and not no_sidebar %}
+<!-- ── Authenticated Layout ──────────────────────────── -->
+<div class="app-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar" role="navigation" aria-label="Main navigation">
+        <div class="brand-section">
+            <div class="brand-logo"><i class="fas fa-layer-group"></i></div>
+            <div>
+                <div class="brand-name">InsightHR</div>
+                <div class="brand-tagline">AI Resume Intelligence</div>
+            </div>
+        </div>
+
+        <nav class="nav-links">
+            <span class="nav-section-label">Main</span>
+
+            <a href="{{ url_for('dashboard') }}" class="nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                <i class="fas fa-home"></i> Dashboard
+            </a>
+            <a href="{{ url_for('dashboard') }}#upload" class="nav-item">
+                <i class="fas fa-magic"></i> Analyze Resume
+            </a>
+            <a href="{{ url_for('compare') }}" class="nav-item {% if request.endpoint == 'compare' %}active{% endif %}">
+                <i class="fas fa-balance-scale"></i> Compare
+            </a>
+
+            <span class="nav-section-label" style="margin-top:0.25rem;">History</span>
+
+            <a href="{{ url_for('history') }}" class="nav-item {% if request.endpoint == 'history' %}active{% endif %}">
+                <i class="fas fa-history"></i> History
+            </a>
+
+            <span class="nav-section-label" style="margin-top:0.25rem;">Account</span>
+
+            <a href="{{ url_for('settings') }}" class="nav-item {% if request.endpoint == 'settings' %}active{% endif %}">
+                <i class="fas fa-cog"></i> Settings
+            </a>
+            <a href="{{ url_for('logout') }}" class="nav-item logout">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="avatar">
+                    {% if current_user.avatar_url %}
+                        <img src="{{ current_user.avatar_url }}" alt="Avatar">
+                    {% else %}
+                        {{ current_user.full_name[0]|upper }}
+                    {% endif %}
+                </div>
+                <div>
+                    <div class="name">{{ current_user.full_name.split()[0] }}</div>
+                    <div class="role">{{ current_user.email }}</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content" id="main-content">
+        <!-- TOPBAR -->
+        <header class="topbar" role="banner">
+            <button class="menu-toggle" id="menu-toggle" aria-label="Toggle sidebar" aria-expanded="false">
+                <i class="fas fa-bars"></i>
+            </button>
+
+            <div class="topbar-search">
+                <form action="{{ url_for('history') }}" method="GET">
+                    <i class="fas fa-search"></i>
+                    <input type="text" name="search" placeholder="Search candidates, roles…" autocomplete="off">
+                </form>
+            </div>
+
+            <div class="topbar-actions">
+                <button class="icon-btn theme-toggle" id="theme-toggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+
+                <a href="{{ url_for('settings') }}" class="user-chip" aria-label="Profile settings">
+                    <div class="avatar">
+                        {% if current_user.avatar_url %}
+                            <img src="{{ current_user.avatar_url }}" alt="Avatar">
+                        {% else %}
+                            {{ current_user.full_name[0]|upper }}
+                        {% endif %}
+                    </div>
+                    <span class="name">{{ current_user.full_name.split()[0] }}</span>
+                </a>
+            </div>
+        </header>
+
+        <!-- PAGE CONTENT -->
+        <div class="page-content">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+</div>
+
+{% else %}
+    <!-- ── Public Layout (Login, Signup) ──────────────── -->
+    {% block no_sidebar_content %}{% endblock %}
+{% endif %}
+
+<!-- Scripts -->
+<script src="{{ url_for('static', filename='js/main.js') }}?v=2"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

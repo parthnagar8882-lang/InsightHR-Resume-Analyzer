@@ -1,0 +1,528 @@
+{% extends "base.html" %}
+{% block title %}Report — {{ resume.candidate_name }} — InsightHR{% endblock %}
+
+{% block content %}
+<div class="report-page">
+<!-- ── Page Header ─────────────────────────────────────── -->
+<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;margin-bottom:2rem;">
+    <div>
+        <a href="{{ url_for('dashboard') }}" style="display:inline-flex;align-items:center;gap:.5rem;color:var(--text-muted);font-size:.85rem;margin-bottom:.75rem;">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+        <h1 class="page-title">Analysis Report</h1>
+        <p class="page-subtitle">
+            <i class="far fa-file-alt"></i> {{ resume.filename }}
+            &nbsp;·&nbsp;
+            <i class="far fa-calendar-alt"></i> {{ resume.created_at.strftime('%B %d, %Y') }}
+        </p>
+    </div>
+    <div style="display:flex;gap:.75rem;flex-wrap:wrap;" class="no-print">
+        <button id="export-pdf-btn" type="button" class="btn btn-outline">
+            <i class="fas fa-download"></i> Download PDF
+        </button>
+        <button class="btn btn-primary" onclick="navigator.clipboard.writeText(window.location.href).then(()=>alert('Link copied!'))">
+            <i class="fas fa-share-alt"></i> Share
+        </button>
+    </div>
+</div>
+
+<!-- ── Main 3-col Grid ─────────────────────────────────── -->
+<div class="grid-cols-3" style="gap:1.5rem;align-items:start;">
+
+    <!-- ── LEFT COL ──────────────────────────────────────── -->
+    <div style="grid-column:span 1;display:flex;flex-direction:column;gap:1.5rem;">
+
+        <!-- Overall Score -->
+        <div class="glass-card" style="text-align:center;padding:2.5rem 1.5rem;">
+            <div class="score-circle">
+                <canvas id="scoreChart"></canvas>
+                <div class="score-text {% if resume.score >= 80 %}text-green{% elif resume.score >= 60 %}text-yellow{% else %}text-red{% endif %}">
+                    {{ resume.score|int }}<span style="font-size:1rem;">%</span>
+                </div>
+                <div class="score-label">Overall Score</div>
+            </div>
+            <h3 style="font-weight:700;margin-top:1.25rem;font-size:1rem;">AI Match Score</h3>
+            <p style="color:var(--text-muted);font-size:.85rem;margin-top:.3rem;">
+                Role: <strong style="color:var(--primary);">{{ resume.career_suggestion }}</strong>
+            </p>
+        </div>
+
+        <!-- ATS Score -->
+        <div class="glass-card" style="text-align:center;padding:2rem 1.5rem;">
+            <div class="score-circle" style="width:120px;height:120px;margin-bottom:.75rem;">
+                <canvas id="atsChart"></canvas>
+                <div class="score-text" style="font-size:1.8rem;{% if resume.ats_score >= 80 %}color:var(--green){% elif resume.ats_score >= 60 %}color:var(--yellow){% else %}color:var(--red){% endif %}">
+                    {{ resume.ats_score|int }}%
+                </div>
+                <div class="score-label">ATS Score</div>
+            </div>
+            <h3 style="font-weight:700;font-size:.95rem;">ATS Compatibility</h3>
+            <p style="font-size:.8rem;color:var(--text-muted);margin-top:.3rem;">Applicant Tracking System</p>
+        </div>
+
+        <!-- Candidate Snapshot -->
+        <div class="glass-card">
+            <h3 style="font-weight:700;font-size:.95rem;margin-bottom:1.25rem;">
+                <i class="fas fa-user" style="color:var(--primary);margin-right:.5rem;"></i>Candidate Snapshot
+            </h3>
+            <div class="info-row">
+                <span class="label">Name</span>
+                <span class="value">{{ resume.candidate_name }}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Experience</span>
+                <span class="value">{{ resume.experience_years }} years</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Best Role</span>
+                <span class="value" style="color:var(--primary);">{{ resume.career_suggestion }}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Writing Tone</span>
+                <span class="chip chip-purple">{{ resume.tone }}</span>
+            </div>
+            <div class="info-row" style="border:none;">
+                <span class="label">Analyzed</span>
+                <span class="value">{{ resume.created_at.strftime('%b %d, %Y') }}</span>
+            </div>
+        </div>
+
+        <!-- Missing Sections -->
+        {% set missing_sections = safe_json(resume.missing_sections) %}
+        {% if missing_sections %}
+        <div class="glass-card" style="border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.03);">
+            <h3 style="font-weight:700;font-size:.95rem;color:var(--yellow);margin-bottom:1rem;">
+                <i class="fas fa-exclamation-circle"></i> Missing Sections
+            </h3>
+            <div class="tag-list">
+                {% for s in missing_sections %}
+                <span class="tag missing"><i class="fas fa-times-circle"></i> {{ s }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ── RIGHT COL ─────────────────────────────────────── -->
+    <div style="grid-column:span 2;display:flex;flex-direction:column;gap:1.5rem;">
+
+        <!-- Section Scores -->
+        <div class="glass-card">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-tasks"></i> Section-wise Scores</div>
+            </div>
+            {% set sect = safe_json(resume.section_scores, {}) %}
+            <div style="display:flex;flex-direction:column;gap:0.85rem;">
+                {% for name, val in sect.items() %}
+                {% set pct = val|float %}
+                <div class="skill-bar-wrap">
+                    <div class="skill-bar-header">
+                        <span style="font-weight:600;font-size:.875rem;">{{ name }}</span>
+                        <span style="font-weight:700;font-size:.875rem;">{{ pct|int }}%</span>
+                    </div>
+                    <div class="skill-bar-bg report-bar-bg">
+                        <div class="skill-bar-fill {% if pct >= 80 %}green{% elif pct >= 60 %}yellow{% else %}red{% endif %}"
+                             style="width: {{ pct }}%;"
+                             data-width="{{ pct }}%"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Detected Skills -->
+        <div class="glass-card">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-layer-group"></i> Detected Skills</div>
+                {% set s_list = safe_json(resume.skills) %}
+                <span class="chip chip-teal">{{ s_list|length }} found</span>
+            </div>
+            {% if s_list %}
+                <div class="tag-list mb-4 report-skill-tags">
+                    {% for skill in s_list %}
+                        <span class="tag report-skill-tag">{{ skill }}</span>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p style="color:var(--text-muted);font-size:.9rem;">No specific technical skills detected.</p>
+            {% endif %}
+
+            <hr class="divider-line">
+
+            <!-- Role Alignment Bar -->
+            <div class="skill-bar-wrap">
+                <div class="skill-bar-header">
+                    <span>Role Alignment</span>
+                    <span style="font-weight:700;">{{ resume.score|int }}%</span>
+                </div>
+                <div class="skill-bar-bg report-bar-bg">
+                    <div class="skill-bar-fill {% if resume.score >= 80 %}green{% elif resume.score >= 60 %}yellow{% else %}red{% endif %}"
+                         style="width: {{ resume.score }}%;"
+                         data-width="{{ resume.score }}%"></div>
+                </div>
+            </div>
+
+            <!-- Experience Bar -->
+            <div class="skill-bar-wrap">
+                <div class="skill-bar-header">
+                    <span>Experience Level</span>
+                    <span style="font-weight:700;">{{ resume.experience_years }} yrs</span>
+                </div>
+                <div class="skill-bar-bg report-bar-bg">
+                    <div class="skill-bar-fill" style="width: {{ [resume.experience_years * 10, 100]|min }}%;" data-width="{{ [resume.experience_years * 10, 100]|min }}%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Missing Skills + Strengths -->
+        <div class="grid-cols-2" style="gap:1.5rem;">
+            {% set missing = safe_json(resume.missing_skills) %}
+            <div class="glass-card" style="border-color:rgba(239,68,68,.2);background:rgba(239,68,68,.02);">
+                <h3 style="font-weight:700;font-size:.95rem;color:var(--red);margin-bottom:.75rem;">
+                    <i class="fas fa-exclamation-triangle"></i> Missing Key Skills
+                </h3>
+                <p style="font-size:.78rem;color:var(--text-muted);margin-bottom:.85rem;">Required for {{ resume.career_suggestion }}</p>
+                {% if missing %}
+                    <div class="tag-list">
+                        {% for m in missing %}
+                        <span class="tag missing">{{ m }}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p style="font-size:.9rem;font-weight:600;color:var(--green);">
+                        <i class="fas fa-check-circle"></i> Core requirements met!
+                    </p>
+                {% endif %}
+            </div>
+
+            <div class="glass-card" style="border-color:rgba(16,185,129,.2);background:rgba(16,185,129,.02);">
+                <h3 style="font-weight:700;font-size:.95rem;color:var(--green);margin-bottom:.75rem;">
+                    <i class="fas fa-star"></i> Core Strengths
+                </h3>
+                <ul class="report-strength-list">
+                    {% for st in safe_json(resume.strengths) %}
+                    <li style="margin-bottom:.4rem;">{{ st }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Career Suggestions -->
+        <div class="glass-card">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-compass"></i> AI Career Suggestions</div>
+            </div>
+            <div class="grid-cols-3" style="gap:1rem;">
+                {% for career in safe_json(resume.career_suggestions) %}
+                <div class="career-card">
+                    <div class="role">{{ career.role }}</div>
+                    <div class="salary"><i class="fas fa-dollar-sign"></i> {{ career.salary }}</div>
+                    <div class="career-meta">
+                        <span class="career-meta-item growth"><i class="fas fa-seedling"></i> {{ career.growth }} Growth</span>
+                        <span class="career-meta-item demand"><i class="fas fa-fire"></i> {{ career.demand }}</span>
+                    </div>
+                    {% if career.skills %}
+                    <div class="tag-list" style="margin-top:.75rem;">
+                        {% for sk in career.skills[:3] %}
+                        <span class="tag" style="font-size:.7rem;">{{ sk }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <div style="grid-column:span 3;color:var(--text-muted);font-size:.9rem;">No career suggestions available.</div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- AI Improvement Suggestions -->
+        <div class="glass-card">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-robot"></i> AI Improvement Tips</div>
+                <span class="chip chip-purple">{{ safe_json(resume.suggestions)|length }} tips</span>
+            </div>
+            {% for sugg in safe_json(resume.suggestions) %}
+            <div class="suggestion-item">
+                <i class="fas fa-lightbulb"></i>
+                <p style="font-size:.875rem;line-height:1.6;">{{ sugg }}</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Suggested Courses -->
+        {% set courses = safe_json(resume.courses) %}
+        {% if courses %}
+        <div class="glass-card">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-graduation-cap"></i> Recommended Courses</div>
+            </div>
+            <div class="grid-cols-2" style="gap:.75rem;">
+                {% for course in courses %}
+                <div style="display:flex;align-items:center;gap:.75rem;padding:.85rem;border:1px solid var(--border-color);border-radius:.6rem;background:var(--bg-color);">
+                    <i class="fas fa-book" style="color:var(--accent);flex-shrink:0;"></i>
+                    <span style="font-size:.85rem;font-weight:500;">{{ course }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Project Ideas -->
+        {% set projects = safe_json(resume.project_ideas) %}
+        {% if projects %}
+        <div class="glass-card">
+            <div class="card-header">
+                <div class="card-title"><i class="fas fa-code"></i> Project Ideas to Build</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:.6rem;">
+                {% for proj in projects %}
+                <div style="display:flex;align-items:center;gap:.75rem;padding:.85rem;border:1px solid var(--border-color);border-radius:.6rem;background:var(--bg-color);">
+                    <div style="width:32px;height:32px;border-radius:8px;background:var(--btn-gradient);display:flex;align-items:center;justify-content:center;color:white;font-size:.8rem;flex-shrink:0;">{{ loop.index }}</div>
+                    <span style="font-size:.875rem;font-weight:500;">{{ proj }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</div><!-- end main grid -->
+</div>
+
+<!-- ── AI Chatbot Widget ────────────────────────────────── -->
+<div class="chatbot-widget" id="chatbot-widget">
+    <div id="chatbot-window" class="chatbot-window">
+        <div class="chatbot-header">
+            <div style="width:36px;height:36px;background:rgba(255,255,255,.2);border-radius:50%;display:flex;align-items:center;justify-content:center;">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div>
+                <h3>Insight AI</h3>
+                <p>Resume Assistant</p>
+            </div>
+            <button id="chatbot-close" style="margin-left:auto;background:none;border:none;color:white;cursor:pointer;font-size:1rem;">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <div id="chatbot-messages" class="chatbot-messages">
+            <div class="chat-msg chat-msg-bot">
+                Hi! I've analyzed <strong>{{ resume.candidate_name }}</strong>'s resume. Ask me anything! 🎯
+                <div class="chat-quick-replies">
+                    <button class="chat-quick-reply" onclick="sendChatQuery('What skills are missing?')">Missing Skills?</button>
+                    <button class="chat-quick-reply" onclick="sendChatQuery('What are the main strengths?')">Strengths?</button>
+                    <button class="chat-quick-reply" onclick="sendChatQuery('Explain the score')">Score details?</button>
+                    <button class="chat-quick-reply" onclick="sendChatQuery('Best career path?')">Career advice?</button>
+                </div>
+            </div>
+        </div>
+
+        <form id="chatbot-form" class="chatbot-input" onsubmit="event.preventDefault();submitChat();">
+            <input type="text" id="chatbot-input-field" placeholder="Ask about skills, career, gaps…" autocomplete="off">
+            <button type="submit"><i class="fas fa-paper-plane"></i></button>
+        </form>
+    </div>
+
+    <button id="chatbot-toggle" class="chatbot-bubble" aria-label="Open AI assistant">
+        <i class="fas fa-comment-dots"></i>
+    </button>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+    .report-page .glass-card {
+        overflow: hidden;
+    }
+
+    .report-page .report-bar-bg {
+        height: 10px;
+        border-radius: 999px;
+        background: linear-gradient(180deg, rgba(107, 114, 128, 0.18), rgba(107, 114, 128, 0.08));
+        box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
+    }
+
+    .report-page .skill-bar-fill {
+        min-width: 10px;
+        box-shadow: 0 0 16px rgba(108, 99, 255, 0.22);
+    }
+
+    .report-page .skill-bar-fill.green {
+        box-shadow: 0 0 16px rgba(16, 185, 129, 0.28);
+    }
+
+    .report-page .skill-bar-fill.yellow {
+        box-shadow: 0 0 16px rgba(245, 158, 11, 0.28);
+    }
+
+    .report-page .skill-bar-fill.red {
+        box-shadow: 0 0 16px rgba(239, 68, 68, 0.25);
+    }
+
+    .report-page .report-skill-tags {
+        gap: 0.6rem;
+    }
+
+    .report-page .report-skill-tag {
+        padding: 0.5rem 0.9rem;
+        border-radius: 999px;
+        background: rgba(108, 99, 255, 0.12);
+        border: 1px solid rgba(108, 99, 255, 0.18);
+        color: var(--primary);
+        font-weight: 700;
+        letter-spacing: 0.01em;
+        box-shadow: 0 4px 12px rgba(108, 99, 255, 0.08);
+    }
+
+    .report-page .report-strength-list {
+        padding-left: 1rem;
+        list-style: disc;
+        color: var(--text-main);
+        font-size: 0.875rem;
+    }
+
+    .report-page .skill-bar-header span:first-child {
+        color: var(--text-main);
+        font-weight: 600;
+    }
+
+    .report-page .skill-bar-header span:last-child {
+        color: var(--text-muted);
+        font-weight: 800;
+    }
+
+    @media (max-width: 768px) {
+        .report-page .report-skill-tag {
+            font-size: 0.74rem;
+            padding: 0.45rem 0.75rem;
+        }
+    }
+</style>
+<script>
+    window.resumeScore = Number('{{ resume.score }}') || 0;
+    window.atsScore    = Number('{{ resume.ats_score }}') || 0;
+
+    // Chatbot data for local processing
+    const resumeData = {
+        name:      "{{ resume.candidate_name|replace('"', '\\"') }}",
+        role:      "{{ resume.career_suggestion|replace('"', '\\"') }}",
+        score:     window.resumeScore,
+        ats:       window.atsScore,
+        exp:       Number('{{ resume.experience_years }}') || 0,
+        missing:   (function(){ try { return JSON.parse('{{ resume.missing_skills|safe if resume.missing_skills else "[]" }}'); } catch(e) { return []; } })(),
+        strengths: (function(){ try { return JSON.parse('{{ resume.strengths|safe if resume.strengths else "[]" }}'); } catch(e) { return []; } })(),
+        tone:      "{{ resume.tone }}"
+    };
+
+    // Chatbot UI
+    const chatToggle = document.getElementById('chatbot-toggle');
+    const chatClose  = document.getElementById('chatbot-close');
+    const chatWindow = document.getElementById('chatbot-window');
+    const chatMsgs   = document.getElementById('chatbot-messages');
+    const chatInputF = document.getElementById('chatbot-input-field');
+
+    chatToggle.addEventListener('click', () => {
+        chatWindow.classList.toggle('active');
+        if (chatWindow.classList.contains('active')) chatInputF.focus();
+    });
+    chatClose.addEventListener('click', () => chatWindow.classList.remove('active'));
+
+    function appendMsg(text, isUser = false) {
+        const div = document.createElement('div');
+        div.className = `chat-msg ${isUser ? 'chat-msg-user' : 'chat-msg-bot'}`;
+        div.innerHTML = text;
+        chatMsgs.appendChild(div);
+        chatMsgs.scrollTop = chatMsgs.scrollHeight;
+    }
+
+    function sendChatQuery(q) { appendMsg(q, true); setTimeout(() => respond(q.toLowerCase()), 500); }
+
+    function submitChat() {
+        const q = chatInputF.value.trim();
+        if (!q) return;
+        chatInputF.value = '';
+        sendChatQuery(q);
+    }
+
+    function respond(q) {
+        let r = '';
+        if (q.includes('missing') || q.includes('gap') || q.includes('lack')) {
+            r = resumeData.missing.length
+                ? `For the <strong>${resumeData.role}</strong> role, missing skills:<br><ul style="padding-left:1.2rem;margin-top:.5rem;">${resumeData.missing.map(m=>`<li>${m}</li>`).join('')}</ul>`
+                : '✅ They meet all core skill requirements for this role!';
+        } else if (q.includes('strength') || q.includes('good') || q.includes('skill')) {
+            r = `Top skills detected:<br><ul style="padding-left:1.2rem;margin-top:.5rem;">${resumeData.strengths.map(s=>`<li>${s}</li>`).join('')}</ul>`;
+        } else if (q.includes('score') || q.includes('rating') || q.includes('match')) {
+            r = `Overall: <strong>${resumeData.score}%</strong><br>ATS: <strong>${resumeData.ats}%</strong><br>Based on ${resumeData.exp} years experience and skill coverage.`;
+        } else if (q.includes('career') || q.includes('job') || q.includes('role')) {
+            r = `Best-matched role: <strong>${resumeData.role}</strong>.<br>Check the career suggestions section above for alternatives with salary ranges!`;
+        } else if (q.includes('experience') || q.includes('years')) {
+            r = `Approximately <strong>${resumeData.exp} years</strong> of relevant experience detected.`;
+        } else if (q.includes('tone') || q.includes('writing') || q.includes('style')) {
+            r = `Writing tone detected as <strong>${resumeData.tone}</strong>. This indicates a good professional voice.`;
+        } else if (q.includes('hi') || q.includes('hello') || q.includes('hey')) {
+            r = "Hello! 👋 I can answer questions about <strong>skills</strong>, <strong>gaps</strong>, <strong>score</strong>, <strong>career paths</strong>, or <strong>experience</strong>. What do you need?";
+        } else {
+            r = "I can help with: <strong>missing skills</strong>, <strong>strengths</strong>, <strong>match score</strong>, <strong>ATS score</strong>, or <strong>career recommendations</strong>. Try asking one of those!";
+        }
+        appendMsg(r, false);
+    }
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        document.querySelectorAll('.report-page .skill-bar-fill[data-width]').forEach((bar) => {
+            const width = bar.getAttribute('data-width');
+            if (width) {
+                bar.style.width = width;
+            }
+        });
+    });
+</script>
+<script>
+    (function () {
+        const exportBtn = document.getElementById('export-pdf-btn');
+        if (!exportBtn) return;
+
+        exportBtn.addEventListener('click', async () => {
+            if (typeof html2pdf === 'undefined') {
+                alert('PDF export library did not load. Please refresh and try again.');
+                return;
+            }
+
+            exportBtn.disabled = true;
+            exportBtn.innerHTML = '<span class="spinner"></span> Generating PDF...';
+
+            const element = document.querySelector('.page-content');
+            const actionBtns = document.querySelectorAll('.no-print');
+            const previousTheme = document.documentElement.getAttribute('data-theme') || 'light';
+
+            actionBtns.forEach((node) => {
+                node.dataset.prevDisplay = node.style.display || '';
+                node.style.display = 'none';
+            });
+
+            document.documentElement.setAttribute('data-theme', 'light');
+
+            try {
+                await html2pdf().set({
+                    margin: [10, 10, 10, 10],
+                    filename: 'InsightHR_Resume_Report.pdf',
+                    image: { type: 'jpeg', quality: 0.97 },
+                    html2canvas: { scale: 2, useCORS: true, logging: false },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                }).from(element).save();
+            } catch (error) {
+                alert('Failed to generate PDF. Please try again.');
+            } finally {
+                document.documentElement.setAttribute('data-theme', previousTheme);
+                actionBtns.forEach((node) => {
+                    node.style.display = node.dataset.prevDisplay || '';
+                    delete node.dataset.prevDisplay;
+                });
+                exportBtn.disabled = false;
+                exportBtn.innerHTML = '<i class="fas fa-download"></i> Download PDF';
+            }
+        });
+    })();
+</script>
+{% endblock %}

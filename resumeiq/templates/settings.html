@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% block title %}Settings — InsightHR{% endblock %}
+
+{% block content %}
+<!-- ── Page Header ─────────────────────────────────────── -->
+<div class="page-header">
+    <h1 class="page-title">Profile &amp; Settings</h1>
+    <p class="page-subtitle">Manage your account, security, and preferences.</p>
+</div>
+
+<div class="grid-cols-3" style="gap:2rem;align-items:start;">
+
+    <!-- ── LEFT: Profile Picture ─────────────────────────── -->
+    <div style="grid-column:span 1;">
+        <div class="glass-card" style="text-align:center;">
+            <!-- Avatar -->
+            <div class="avatar lg" style="margin:0 auto 1.5rem;">
+                {% if current_user.avatar_url %}
+                    <img src="{{ current_user.avatar_url }}" alt="Profile picture" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">
+                {% else %}
+                    {{ current_user.full_name[0]|upper }}
+                {% endif %}
+            </div>
+
+            <div style="font-weight:800;font-size:1.1rem;margin-bottom:.25rem;">{{ current_user.full_name }}</div>
+            <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:1.5rem;">{{ current_user.email }}</div>
+
+            <div class="chip chip-purple" style="margin:0 auto .75rem;width:fit-content;">
+                <i class="fas fa-calendar-alt"></i>
+                Joined {{ current_user.created_at.strftime('%B %Y') }}
+            </div>
+
+            <hr class="divider-line">
+
+            <!-- Upload Avatar -->
+            <form action="{{ url_for('settings') }}" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="upload_avatar">
+                <label class="btn btn-outline" style="width:100%;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.5rem;">
+                    <i class="fas fa-camera"></i> Change Photo
+                    <input type="file" name="avatar" accept="image/*" style="display:none;" onchange="this.form.submit()">
+                </label>
+            </form>
+            <p style="font-size:.75rem;color:var(--text-muted);margin-top:.75rem;">JPG, PNG or GIF · Max 2 MB</p>
+        </div>
+
+        <!-- Account Stats -->
+        <div class="glass-card" style="margin-top:1.5rem;animation-delay:.1s;">
+            <h3 style="font-weight:700;font-size:.95rem;margin-bottom:1.25rem;"><i class="fas fa-chart-pie" style="color:var(--primary);margin-right:.5rem;"></i>Account Summary</h3>
+            <div class="info-row">
+                <span class="label">Total Analyses</span>
+                <span class="value fw-700">{{ current_user.resumes|length }}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Theme</span>
+                <span class="chip {% if current_user.theme_pref == 'dark' %}chip-purple{% else %}chip-teal{% endif %}">
+                    <i class="fas {% if current_user.theme_pref == 'dark' %}fa-moon{% else %}fa-sun{% endif %}"></i>
+                    {{ current_user.theme_pref|capitalize }}
+                </span>
+            </div>
+            <div class="info-row" style="border:none;">
+                <span class="label">Account Type</span>
+                <span class="chip chip-green"><i class="fas fa-check-circle"></i> Free</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── RIGHT: Settings Forms ──────────────────────────── -->
+    <div style="grid-column:span 2;">
+        <div class="glass-card">
+
+            <!-- PERSONAL INFORMATION -->
+            <div class="settings-section">
+                <div class="settings-section-title">
+                    <i class="fas fa-user-edit" style="color:var(--primary);margin-right:.5rem;"></i>Personal Information
+                </div>
+                <div class="settings-section-desc">Update your display name and account details.</div>
+                <form action="{{ url_for('settings') }}" method="POST">
+                    <input type="hidden" name="action" value="update_profile">
+                    <div class="grid-cols-2">
+                        <div class="form-group">
+                            <label class="form-label" for="full_name">Full Name</label>
+                            <div class="input-icon-wrap">
+                                <i class="fas fa-user prefix"></i>
+                                <input type="text" id="full_name" name="full_name" class="form-control"
+                                       value="{{ current_user.full_name }}" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email Address</label>
+                            <div class="input-icon-wrap">
+                                <i class="fas fa-envelope prefix"></i>
+                                <input type="email" class="form-control" value="{{ current_user.email }}" disabled
+                                       style="opacity:.6;cursor:not-allowed;">
+                            </div>
+                            <p class="form-hint">Email cannot be changed.</p>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm" style="padding:.55rem 1.25rem;">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+                </form>
+            </div>
+
+            <!-- APPEARANCE -->
+            <div class="settings-section">
+                <div class="settings-section-title">
+                    <i class="fas fa-palette" style="color:var(--primary);margin-right:.5rem;"></i>Appearance
+                </div>
+                <div class="settings-section-desc">Choose your preferred interface theme.</div>
+
+                <div class="theme-picker">
+                    <label class="theme-option {% if current_user.theme_pref == 'light' %}selected{% endif %}" id="light-option">
+                        <input type="radio" name="theme_pref" value="light" {% if current_user.theme_pref == 'light' %}checked{% endif %}>
+                        <div class="theme-preview theme-preview-light" style="display:flex;align-items:center;justify-content:center;gap:4px;">
+                            <div style="width:16px;height:28px;background:#E5E7EB;border-radius:3px;"></div>
+                            <div style="flex:1;display:flex;flex-direction:column;gap:3px;padding-right:4px;">
+                                <div style="height:5px;background:#D1D5DB;border-radius:2px;"></div>
+                                <div style="height:5px;background:#E5E7EB;border-radius:2px;"></div>
+                                <div style="height:5px;background:#E5E7EB;border-radius:2px;"></div>
+                            </div>
+                        </div>
+                        <span class="theme-label"><i class="fas fa-sun" style="color:#F59E0B;"></i> Light Mode</span>
+                    </label>
+
+                    <label class="theme-option {% if current_user.theme_pref == 'dark' %}selected{% endif %}" id="dark-option">
+                        <input type="radio" name="theme_pref" value="dark" {% if current_user.theme_pref == 'dark' %}checked{% endif %}>
+                        <div class="theme-preview theme-preview-dark" style="display:flex;align-items:center;justify-content:center;gap:4px;">
+                            <div style="width:16px;height:28px;background:#1E293B;border-radius:3px;"></div>
+                            <div style="flex:1;display:flex;flex-direction:column;gap:3px;padding-right:4px;">
+                                <div style="height:5px;background:#334155;border-radius:2px;"></div>
+                                <div style="height:5px;background:#1E293B;border-radius:2px;"></div>
+                                <div style="height:5px;background:#1E293B;border-radius:2px;"></div>
+                            </div>
+                        </div>
+                        <span class="theme-label" style="color:white;"><i class="fas fa-moon" style="color:#8B5CF6;"></i> Dark Mode</span>
+                    </label>
+                </div>
+
+                <button type="button" class="btn btn-outline btn-sm" style="margin-top:1rem;" id="theme-save-btn"
+                        onclick="updateThemeAjax('{{ url_for('settings') }}')">
+                    Save Theme
+                </button>
+            </div>
+
+            <!-- SECURITY -->
+            <div class="settings-section">
+                <div class="settings-section-title">
+                    <i class="fas fa-shield-alt" style="color:var(--primary);margin-right:.5rem;"></i>Security
+                </div>
+                <div class="settings-section-desc">Change your password to keep your account secure.</div>
+                <form action="{{ url_for('settings') }}" method="POST" style="max-width:500px;">
+                    <input type="hidden" name="action" value="change_password">
+                    <div class="form-group" style="position:relative;">
+                        <label class="form-label" for="current_password">Current Password</label>
+                        <div class="input-icon-wrap" style="position:relative;">
+                            <i class="fas fa-lock prefix"></i>
+                            <input type="password" id="current_password" name="current_password" class="form-control" required>
+                            <button type="button" class="eye-toggle" data-target="current_password">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="grid-cols-2">
+                        <div class="form-group" style="position:relative;">
+                            <label class="form-label" for="new_password">New Password</label>
+                            <div class="input-icon-wrap" style="position:relative;">
+                                <i class="fas fa-lock prefix"></i>
+                                <input type="password" id="new_password" name="new_password" class="form-control" required>
+                                <button type="button" class="eye-toggle" data-target="new_password">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group" style="position:relative;">
+                            <label class="form-label" for="confirm_password">Confirm New</label>
+                            <div class="input-icon-wrap" style="position:relative;">
+                                <i class="fas fa-lock prefix"></i>
+                                <input type="password" id="confirm_password" name="confirm_password" class="form-control" required>
+                                <button type="button" class="eye-toggle" data-target="confirm_password">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-outline btn-sm">
+                        <i class="fas fa-key"></i> Change Password
+                    </button>
+                </form>
+            </div>
+
+            <!-- DATA & PRIVACY -->
+            <div class="settings-section">
+                <div class="settings-section-title">
+                    <i class="fas fa-database" style="color:var(--primary);margin-right:.5rem;"></i>Data &amp; Privacy
+                </div>
+                <div class="settings-section-desc">Download your data or manage privacy settings.</div>
+                <a href="{{ url_for('history') }}" class="btn btn-outline btn-sm">
+                    <i class="fas fa-download"></i> Download All Reports
+                </a>
+            </div>
+
+            <!-- DANGER ZONE -->
+            <div class="settings-section" style="border-color:rgba(239,68,68,.2);padding-bottom:0;margin-bottom:0;">
+                <div class="settings-section-title" style="color:var(--red);">
+                    <i class="fas fa-exclamation-triangle"></i> Danger Zone
+                </div>
+                <div class="settings-section-desc">Permanently delete your account and all associated data.</div>
+                <form action="{{ url_for('settings') }}" method="POST"
+                      onsubmit="return confirm('⚠️ This will permanently delete your account and ALL resume data. Are you absolutely sure?');">
+                    <input type="hidden" name="action" value="delete_account">
+                    <button type="submit" class="btn btn-danger btn-sm">
+                        <i class="fas fa-trash-alt"></i> Delete Account
+                    </button>
+                </form>
+            </div>
+
+        </div><!-- end glass-card -->
+    </div><!-- end right col -->
+
+</div><!-- end grid -->
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Theme picker toggle
+    document.querySelectorAll('.theme-option').forEach(option => {
+        option.addEventListener('click', () => {
+            document.querySelectorAll('.theme-option').forEach(o => o.classList.remove('selected'));
+            option.classList.add('selected');
+            option.querySelector('input').checked = true;
+        });
+    });
+</script>
+{% endblock %}

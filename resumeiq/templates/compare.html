@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+{% block title %}Compare Resumes — InsightHR{% endblock %}
+
+{% block content %}
+<!-- ── Page Header ─────────────────────────────────────── -->
+<div class="page-header">
+    <h1 class="page-title">Compare Candidates</h1>
+    <p class="page-subtitle">Upload two resumes side-by-side to find the best fit with AI analysis.</p>
+</div>
+
+{% if not result %}
+<!-- ── Upload Form ──────────────────────────────────────── -->
+<div class="glass-card">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-balance-scale"></i> Two Resume Comparison</div>
+    </div>
+    <form action="{{ url_for('compare') }}" method="POST" enctype="multipart/form-data" data-loading="true">
+
+        <div class="grid-cols-2" style="gap:2rem;margin-bottom:2rem;">
+
+            <!-- Resume A -->
+            <div>
+                <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem;">
+                    <div style="width:10px;height:10px;border-radius:50%;background:var(--btn-gradient);"></div>
+                    <h3 style="font-weight:700;font-size:.95rem;color:var(--primary);">Candidate A</h3>
+                </div>
+                <div id="upload-zone-1" class="upload-zone" style="cursor:pointer;" role="button" tabindex="0">
+                    <i class="fas fa-file-pdf upload-icon"></i>
+                    <p class="upload-primary" style="font-weight:600;margin-bottom:.4rem;">Drop Resume A here</p>
+                    <p class="upload-sub" style="font-size:.82rem;color:var(--text-muted);margin-bottom:1rem;">PDF, DOCX, or TXT · Max 10 MB</p>
+                    <span class="btn btn-outline btn-sm" style="pointer-events:none;">Browse Files</span>
+                </div>
+                <input type="file" id="resume_a" name="resume_a" class="file-input" accept=".pdf,.docx,.txt" required>
+            </div>
+
+            <!-- VS divider + Resume B -->
+            <div>
+                <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.85rem;">
+                    <div style="width:10px;height:10px;border-radius:50%;background:var(--accent);"></div>
+                    <h3 style="font-weight:700;font-size:.95rem;color:var(--accent);">Candidate B</h3>
+                </div>
+                <div id="upload-zone-2" class="upload-zone" style="cursor:pointer;border-color:rgba(20,184,166,.4);" role="button" tabindex="0">
+                    <i class="fas fa-file-pdf upload-icon" style="color:var(--accent);"></i>
+                    <p class="upload-primary" style="font-weight:600;margin-bottom:.4rem;">Drop Resume B here</p>
+                    <p class="upload-sub" style="font-size:.82rem;color:var(--text-muted);margin-bottom:1rem;">PDF, DOCX, or TXT · Max 10 MB</p>
+                    <span class="btn btn-outline btn-sm" style="pointer-events:none;">Browse Files</span>
+                </div>
+                <input type="file" id="resume_b" name="resume_b" class="file-input" accept=".pdf,.docx,.txt" required>
+            </div>
+        </div>
+
+        <div style="text-align:center;padding-top:1rem;border-top:1px solid var(--border-color);">
+            <button type="submit" class="btn btn-primary btn-xl">
+                <i class="fas fa-balance-scale"></i> Run AI Comparison
+            </button>
+            <p style="font-size:.8rem;color:var(--text-muted);margin-top:.75rem;">
+                Your files are analyzed securely and never stored for comparison.
+            </p>
+        </div>
+    </form>
+</div>
+
+{% else %}
+<!-- ── Results View ─────────────────────────────────────── -->
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;" class="no-print">
+    <div>
+        <h2 style="font-size:1.25rem;font-weight:700;">Comparison Results</h2>
+        <a href="{{ url_for('compare') }}" style="font-size:.875rem;color:var(--text-muted);">
+            <i class="fas fa-arrow-left"></i> New Comparison
+        </a>
+    </div>
+    <button class="btn btn-outline" onclick="window.print()">
+        <i class="fas fa-download"></i> Export Report
+    </button>
+</div>
+
+<!-- Winner Banner -->
+<div class="winner-banner">
+    <div class="winner-icon"><i class="fas fa-award"></i></div>
+    <div>
+        <h3 style="font-weight:800;font-size:1.15rem;margin-bottom:.3rem;">
+            🏆 AI Recommendation: <span style="color:var(--green);">{{ result.winner }}</span>
+        </h3>
+        <p style="color:var(--text-muted);font-size:.9rem;line-height:1.5;">{{ result.recommendation }}</p>
+    </div>
+</div>
+
+<!-- Score Comparison Bar -->
+<div class="glass-card" style="margin-bottom:1.5rem;">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-chart-bar"></i> Score Comparison</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:1.25rem;">
+        <!-- Candidate A score bar -->
+        <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:.4rem;font-size:.875rem;font-weight:600;">
+                <span style="color:var(--primary);">{{ result.a.candidate_name }} (A)</span>
+                <span>{{ result.a.score }}%</span>
+            </div>
+            <div class="skill-bar-bg">
+                <div class="skill-bar-fill" data-width="{{ result.a.score }}%"
+                     style="background:var(--btn-gradient);"></div>
+            </div>
+        </div>
+        <!-- Candidate B score bar -->
+        <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:.4rem;font-size:.875rem;font-weight:600;">
+                <span style="color:var(--accent);">{{ result.b.candidate_name }} (B)</span>
+                <span>{{ result.b.score }}%</span>
+            </div>
+            <div class="skill-bar-bg">
+                <div class="skill-bar-fill" data-width="{{ result.b.score }}%"
+                     style="background:linear-gradient(135deg,#14B8A6,#2DD4BF);"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Two-Column Detail Cards -->
+<div class="grid-cols-2" style="gap:1.5rem;margin-bottom:1.5rem;">
+
+    <!-- Candidate A -->
+    <div class="glass-card" style="border-top:4px solid var(--primary);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+            <div>
+                <h3 style="font-weight:800;font-size:1.1rem;">{{ result.a.candidate_name }}</h3>
+                <p style="font-size:.8rem;color:var(--text-muted);"><i class="far fa-file-alt"></i> {{ result.name_a }}</p>
+            </div>
+            <span class="score-badge {% if result.a.score >= result.b.score %}score-high{% else %}score-med{% endif %}" style="font-size:1rem;padding:.4rem 1rem;">
+                {{ result.a.score }}%
+            </span>
+        </div>
+
+        <div class="info-row">
+            <span class="label">Best Role</span>
+            <span class="value" style="color:var(--primary);">{{ result.a.career_suggestion }}</span>
+        </div>
+        <div class="info-row">
+            <span class="label">ATS Score</span>
+            <span class="value">{{ result.a.ats_score }}%</span>
+        </div>
+        <div class="info-row" style="border:none;">
+            <span class="label">Experience</span>
+            <span class="value">{{ result.a.experience_years }} years</span>
+        </div>
+
+        <hr class="divider-line">
+
+        <h4 style="font-size:.82rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem;">Key Strengths</h4>
+        <div class="tag-list">
+            {% for s in safe_json(result.a.strengths) %}
+            <span class="tag">{{ s }}</span>
+            {% endfor %}
+        </div>
+
+        {% set miss_a = safe_json(result.a.missing_skills) %}
+        {% if miss_a %}
+        <hr class="divider-line">
+        <h4 style="font-size:.82rem;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem;">Missing Skills</h4>
+        <div class="tag-list">
+            {% for m in miss_a %}
+            <span class="tag missing">{{ m }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Candidate B -->
+    <div class="glass-card" style="border-top:4px solid var(--accent);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+            <div>
+                <h3 style="font-weight:800;font-size:1.1rem;">{{ result.b.candidate_name }}</h3>
+                <p style="font-size:.8rem;color:var(--text-muted);"><i class="far fa-file-alt"></i> {{ result.name_b }}</p>
+            </div>
+            <span class="score-badge {% if result.b.score >= result.a.score %}score-high{% else %}score-med{% endif %}" style="font-size:1rem;padding:.4rem 1rem;">
+                {{ result.b.score }}%
+            </span>
+        </div>
+
+        <div class="info-row">
+            <span class="label">Best Role</span>
+            <span class="value" style="color:var(--accent);">{{ result.b.career_suggestion }}</span>
+        </div>
+        <div class="info-row">
+            <span class="label">ATS Score</span>
+            <span class="value">{{ result.b.ats_score }}%</span>
+        </div>
+        <div class="info-row" style="border:none;">
+            <span class="label">Experience</span>
+            <span class="value">{{ result.b.experience_years }} years</span>
+        </div>
+
+        <hr class="divider-line">
+
+        <h4 style="font-size:.82rem;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem;">Key Strengths</h4>
+        <div class="tag-list">
+            {% for s in safe_json(result.b.strengths) %}
+            <span class="tag" style="background:rgba(20,184,166,.1);color:var(--accent);border-color:rgba(20,184,166,.2);">{{ s }}</span>
+            {% endfor %}
+        </div>
+
+        {% set miss_b = safe_json(result.b.missing_skills) %}
+        {% if miss_b %}
+        <hr class="divider-line">
+        <h4 style="font-size:.82rem;font-weight:600;color:var(--red);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem;">Missing Skills</h4>
+        <div class="tag-list">
+            {% for m in miss_b %}
+            <span class="tag missing">{{ m }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Quick Comparison Table -->
+<div class="glass-card">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-table"></i> Side-by-Side Metrics</div>
+    </div>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th style="color:var(--primary);">{{ result.a.candidate_name }} (A)</th>
+                    <th style="color:var(--accent);">{{ result.b.candidate_name }} (B)</th>
+                    <th>Winner</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="font-weight:600;">Overall Score</td>
+                    <td>{{ result.a.score }}%</td>
+                    <td>{{ result.b.score }}%</td>
+                    <td>
+                        {% if result.a.score >= result.b.score %}
+                        <span class="chip chip-purple">A ✓</span>
+                        {% else %}
+                        <span class="chip chip-teal">B ✓</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="font-weight:600;">ATS Compatibility</td>
+                    <td>{{ result.a.ats_score }}%</td>
+                    <td>{{ result.b.ats_score }}%</td>
+                    <td>
+                        {% if result.a.ats_score >= result.b.ats_score %}
+                        <span class="chip chip-purple">A ✓</span>
+                        {% else %}
+                        <span class="chip chip-teal">B ✓</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="font-weight:600;">Experience</td>
+                    <td>{{ result.a.experience_years }} yrs</td>
+                    <td>{{ result.b.experience_years }} yrs</td>
+                    <td>
+                        {% if result.a.experience_years >= result.b.experience_years %}
+                        <span class="chip chip-purple">A ✓</span>
+                        {% else %}
+                        <span class="chip chip-teal">B ✓</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td style="font-weight:600;">Best Role</td>
+                    <td>{{ result.a.career_suggestion }}</td>
+                    <td>{{ result.b.career_suggestion }}</td>
+                    <td><span style="font-size:.8rem;color:var(--text-muted);">Role-specific</span></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endif %}
+{% endblock %}

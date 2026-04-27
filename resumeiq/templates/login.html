@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% set no_sidebar = True %}
+{% block title %}Sign In - InsightHR{% endblock %}
+
+{% block no_sidebar_content %}
+<div class="split-layout auth-page">
+    <div class="blobs-bg">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <button class="icon-btn theme-toggle auth-page-action auth-page-action-right" id="theme-toggle" aria-label="Toggle theme">
+        <i class="fas fa-moon"></i>
+    </button>
+
+    <div class="auth-box glass-card auth-card auth-card-login">
+        <div class="auth-logo auth-logo-centered">
+            <div class="auth-logo-icon"><i class="fas fa-layer-group"></i></div>
+            <span class="auth-logo-text">InsightHR</span>
+        </div>
+
+        <h2 class="auth-title auth-text-center">Welcome back</h2>
+        <p class="auth-subtitle auth-text-center">Sign in to your account to continue.</p>
+
+        <form action="{{ url_for('login') }}" method="POST" data-loading="true">
+            <div class="form-group">
+                <label class="form-label" for="login_id">Email address or mobile number</label>
+                <div class="input-icon-wrap">
+                    <i class="fas fa-user prefix"></i>
+                    <input type="text" id="login_id" name="login_id" class="form-control" required
+                           placeholder="you@company.com or 9876543210" autocomplete="username">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">
+                    Password
+                    <a href="{{ url_for('forgot_password') }}" class="auth-inline-link">Forgot password?</a>
+                </label>
+                <div class="input-icon-wrap auth-password-wrap">
+                    <i class="fas fa-lock prefix"></i>
+                    <input type="password" id="password" name="password" class="form-control" required
+                           placeholder="Enter your password" autocomplete="current-password">
+                    <button type="button" class="eye-toggle" data-target="password" aria-label="Show or hide password">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="auth-remember-row">
+                <input type="checkbox" id="remember" name="remember" style="accent-color:var(--primary);">
+                <label for="remember" class="auth-muted-label">Remember me for 30 days</label>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-xl auth-submit-btn" id="login-btn">
+                <i class="fas fa-sign-in-alt"></i> Sign In
+            </button>
+        </form>
+
+        <div class="or-divider">or continue with</div>
+
+        <div class="social-btns">
+            <a href="{{ url_for('social_login', provider='google') }}" class="btn-social">
+                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/google/google-original.svg" alt="Google">
+                Google
+            </a>
+            <a href="{{ url_for('social_login', provider='github') }}" class="btn-social">
+                <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" alt="GitHub">
+                GitHub
+            </a>
+        </div>
+
+        <p class="auth-footer-copy">
+            Don't have an account?
+            <a href="{{ url_for('signup') }}" class="auth-primary-link">Create one free</a>
+        </p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const ghImg = document.querySelector('.btn-social img[alt="GitHub"]');
+function updateGhLogo() {
+    if (!ghImg) return;
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    ghImg.style.filter = isDark ? 'invert(1)' : 'none';
+}
+updateGhLogo();
+new MutationObserver(updateGhLogo).observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ['data-theme']
+});
+</script>
+{% endblock %}

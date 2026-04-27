@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+{% block title %}History — InsightHR{% endblock %}
+
+{% block content %}
+<!-- ── Page Header ─────────────────────────────────────── -->
+<div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;">
+    <div>
+        <h1 class="page-title">Analysis History</h1>
+        <p class="page-subtitle">View and manage all past candidate evaluations.</p>
+    </div>
+    <a href="{{ url_for('dashboard') }}#upload" class="btn btn-primary">
+        <i class="fas fa-plus"></i> New Analysis
+    </a>
+</div>
+
+<!-- ── Filters ─────────────────────────────────────────── -->
+<div class="glass-card" style="padding:1.5rem;margin-bottom:2rem;">
+    <form action="{{ url_for('history') }}" method="GET" style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap;">
+        <div class="form-group" style="margin-bottom:0;flex:2;min-width:250px;">
+            <label class="form-label" for="search">Search</label>
+            <div class="input-icon-wrap">
+                <i class="fas fa-search prefix"></i>
+                <input type="text" id="search" name="search" class="form-control"
+                       placeholder="Name, file, or role…" value="{{ search }}">
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:0;flex:1;min-width:160px;">
+            <label class="form-label" for="min_score">Minimum Score</label>
+            <select id="min_score" name="min_score" class="form-control">
+                <option value="0"  {% if min_score == 0  %}selected{% endif %}>All Scores</option>
+                <option value="60" {% if min_score == 60 %}selected{% endif %}>60%+</option>
+                <option value="70" {% if min_score == 70 %}selected{% endif %}>70%+</option>
+                <option value="80" {% if min_score == 80 %}selected{% endif %}>80%+</option>
+                <option value="90" {% if min_score == 90 %}selected{% endif %}>90%+</option>
+            </select>
+        </div>
+
+        <div style="display:flex;gap:.5rem;flex-shrink:0;padding-bottom:1.1rem;">
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-filter"></i> Filter
+            </button>
+            {% if search or min_score > 0 %}
+            <a href="{{ url_for('history') }}" class="btn btn-outline">
+                <i class="fas fa-times"></i> Clear
+            </a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+
+<!-- ── Table ───────────────────────────────────────────── -->
+<div class="glass-card" style="padding:0;overflow:hidden;">
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Candidate</th>
+                    <th>File</th>
+                    <th>Best Role</th>
+                    <th>Score</th>
+                    <th>ATS</th>
+                    <th>Exp</th>
+                    <th>Date</th>
+                    <th style="text-align:right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in pagination.items %}
+                <tr>
+                    <td>
+                        <div style="display:flex;align-items:center;gap:.75rem;">
+                            <div class="candidate-avatar" style="width:34px;height:34px;font-size:.85rem;">
+                                {{ item.candidate_name[0]|upper }}
+                            </div>
+                            <div>
+                                <div style="font-weight:600;font-size:.875rem;">{{ item.candidate_name }}</div>
+                                <div style="font-size:.75rem;color:var(--text-muted);">{{ item.tone }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td style="color:var(--text-muted);font-size:.82rem;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                        <i class="far fa-file-alt"></i> {{ item.filename }}
+                    </td>
+                    <td style="font-size:.875rem;">{{ item.career_suggestion }}</td>
+                    <td>
+                        <span class="score-badge {% if item.score >= 80 %}score-high{% elif item.score >= 60 %}score-med{% else %}score-low{% endif %}">
+                            {{ item.score }}%
+                        </span>
+                    </td>
+                    <td>
+                        <span class="score-badge {% if item.ats_score >= 80 %}score-high{% elif item.ats_score >= 60 %}score-med{% else %}score-low{% endif %}">
+                            {{ item.ats_score }}%
+                        </span>
+                    </td>
+                    <td style="font-size:.875rem;color:var(--text-muted);">{{ item.experience_years }}y</td>
+                    <td style="font-size:.82rem;color:var(--text-muted);white-space:nowrap;">{{ item.created_at.strftime('%b %d, %Y') }}</td>
+                    <td>
+                        <div style="display:flex;gap:.4rem;justify-content:flex-end;">
+                            <a href="{{ url_for('report', resume_id=item.id) }}" class="btn btn-secondary btn-sm" title="View Report">
+                                <i class="fas fa-eye"></i> View
+                            </a>
+                            <form action="{{ url_for('delete_resume', resume_id=item.id) }}" method="POST" style="display:inline;"
+                                  onsubmit="return confirm('Delete this report?');">
+                                <button type="submit" class="btn btn-danger btn-sm" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <div class="empty-state-icon"><i class="fas fa-search"></i></div>
+                            <h3>No records found</h3>
+                            <p>Try adjusting your filters or upload a new resume to start.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if pagination.pages > 1 %}
+    <div style="padding:1.25rem 1.5rem;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--border-color);flex-wrap:wrap;gap:.5rem;">
+        <span style="font-size:.82rem;color:var(--text-muted);">
+            Showing {{ pagination.items|length }} of {{ pagination.total }} results
+        </span>
+        <div style="display:flex;gap:.5rem;">
+            {% if pagination.has_prev %}
+            <a href="{{ url_for('history', page=pagination.prev_num, search=search, min_score=min_score) }}"
+               class="btn btn-outline btn-sm">
+                <i class="fas fa-chevron-left"></i> Prev
+            </a>
+            {% endif %}
+
+            <!-- Page numbers -->
+            {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if p %}
+                    <a href="{{ url_for('history', page=p, search=search, min_score=min_score) }}"
+                       class="btn btn-sm {% if p == pagination.page %}btn-primary{% else %}btn-outline{% endif %}">{{ p }}</a>
+                {% else %}
+                    <span class="btn btn-sm btn-outline" style="cursor:default;opacity:.5;">…</span>
+                {% endif %}
+            {% endfor %}
+
+            {% if pagination.has_next %}
+            <a href="{{ url_for('history', page=pagination.next_num, search=search, min_score=min_score) }}"
+               class="btn btn-outline btn-sm">
+                Next <i class="fas fa-chevron-right"></i>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

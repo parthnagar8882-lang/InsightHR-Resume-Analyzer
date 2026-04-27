@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>InsightHR Resume Analyzer</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --text: #1f2937;
+      --muted: #4b5563;
+      --accent: #0ea5e9;
+      --border: #dbe3ef;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f172a;
+        --card: #111827;
+        --text: #e5e7eb;
+        --muted: #9ca3af;
+        --accent: #38bdf8;
+        --border: #1f2937;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+    .card {
+      width: min(700px, 100%);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    }
+    h1 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      font-size: 1.6rem;
+    }
+    p {
+      margin: 10px 0;
+      line-height: 1.55;
+      color: var(--muted);
+    }
+    code {
+      background: rgba(125, 125, 125, 0.15);
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 700;
+    }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <h1>InsightHR Resume Analyzer</h1>
+    <p>
+      Netlify needs a root <code>index.html</code> file, so this page is added to resolve the
+      deployment error.
+    </p>
+    <p>
+      This project is a Flask backend app (<code>app.py</code> + Jinja templates), so full features
+      require running Python on a backend host.
+    </p>
+    <p>
+      Quick run command: <code>python app.py</code>
+    </p>
+    <p>
+      For production deployment, use a Python host (Render, Railway, Fly.io, or similar), then
+      point your custom domain there.
+    </p>
+  </main>
+</body>
+</html>

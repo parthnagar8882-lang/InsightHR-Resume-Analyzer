@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — InsightHR{% endblock %}
+
+{% block content %}
+<!-- ── Page Header ─────────────────────────────────────── -->
+<div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem;">
+    <div>
+        <h1 class="page-title">Welcome back, {{ current_user.full_name.split()[0] }}! 👋</h1>
+        <p class="page-subtitle">Here's what's happening with your candidate pool today.</p>
+    </div>
+    <a href="#upload" class="btn btn-primary">
+        <i class="fas fa-plus"></i> New Analysis
+    </a>
+</div>
+
+<!-- ── Stats Row ───────────────────────────────────────── -->
+<div class="grid-cols-4" style="margin-bottom:2rem;">
+
+    <div class="glass-card stat-card" style="padding:1.5rem;">
+        <div class="stat-icon">
+            <i class="fas fa-file-alt"></i>
+        </div>
+        <div class="stat-info">
+            <h3>Total Analyzed</h3>
+            <div class="stat-value" data-count="{{ total }}">{{ total }}</div>
+            <div class="stat-trend"><i class="fas fa-arrow-up"></i> All time</div>
+        </div>
+    </div>
+
+    <div class="glass-card stat-card" style="padding:1.5rem;">
+        <div class="stat-icon" style="background:rgba(16,185,129,.1);color:var(--green);">
+            <i class="fas fa-chart-line"></i>
+        </div>
+        <div class="stat-info">
+            <h3>Avg. Score</h3>
+            <div class="stat-value" data-count="{{ avg_score }}" data-suffix="%">{{ avg_score }}%</div>
+            {% if avg_score >= 70 %}
+            <div class="stat-trend"><i class="fas fa-arrow-up"></i> Above average</div>
+            {% else %}
+            <div class="stat-trend" style="color:var(--yellow);"><i class="fas fa-minus"></i> Below average</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="glass-card stat-card" style="padding:1.5rem;">
+        <div class="stat-icon" style="background:rgba(245,158,11,.1);color:var(--yellow);">
+            <i class="fas fa-clock"></i>
+        </div>
+        <div class="stat-info">
+            <h3>Recent Reports</h3>
+            <div class="stat-value">{{ recent|length }}</div>
+            <div class="stat-trend" style="color:var(--text-muted);">Last 5 analyses</div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ── Main Grid: Upload + Chart ───────────────────────── -->
+<div class="grid-cols-3" style="margin-bottom:2rem;">
+
+    <!-- Upload Card -->
+    <div class="glass-card" id="upload" style="grid-column:span 1;">
+        <div class="card-header">
+            <div class="card-title"><i class="fas fa-cloud-upload-alt"></i> Analyze Resume</div>
+        </div>
+
+        <form id="upload-form" action="{{ url_for('analyze') }}" method="POST" enctype="multipart/form-data" data-loading="true">
+            <div id="upload-zone" class="upload-zone" role="button" tabindex="0" aria-label="Upload resume file">
+                <i class="fas fa-file-upload upload-icon"></i>
+                <p class="upload-primary" style="font-weight:600;margin-bottom:.4rem;">Drag &amp; drop resume here</p>
+                <p class="upload-sub" style="font-size:.82rem;color:var(--text-muted);margin-bottom:1rem;">PDF, DOCX, or TXT · Max 10 MB</p>
+                <label for="resume-upload" id="browse-files-btn" class="btn btn-outline btn-sm" style="cursor:pointer;">
+                    <i class="fas fa-folder-open"></i> Browse Files
+                </label>
+            </div>
+            <input type="file" id="resume-upload" name="resume" class="file-input" accept=".pdf,.docx,.txt" required>
+
+            <button type="submit" class="btn btn-primary" style="width:100%;margin-top:1.25rem;" id="analyze-btn">
+                <i class="fas fa-magic"></i> Analyze with AI
+            </button>
+        </form>
+
+        <div style="margin-top:1.25rem;padding-top:1rem;border-top:1px solid var(--border-color);">
+            <a href="{{ url_for('compare') }}" class="btn btn-secondary" style="width:100%;">
+                <i class="fas fa-balance-scale"></i> Compare Two Resumes
+            </a>
+        </div>
+    </div>
+
+    <!-- Weekly Chart -->
+    <div class="glass-card" style="grid-column:span 2;display:flex;flex-direction:column;">
+        <div class="card-header">
+            <div class="card-title"><i class="fas fa-chart-bar"></i> Weekly Activity</div>
+            <span class="chip chip-purple">Last 7 days</span>
+        </div>
+        <div style="flex:1;min-height:240px;position:relative;">
+            <canvas id="weeklyChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- ── Bottom Grid: Recent + Skill Chart ───────────────── -->
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+    <h2 style="font-size:1.15rem;font-weight:700;">Recent Candidates</h2>
+    <a href="{{ url_for('history') }}" class="btn btn-outline btn-sm">View All <i class="fas fa-arrow-right"></i></a>
+</div>
+
+<div class="grid-cols-3" style="margin-bottom:2rem;">
+    {% for r in recent %}
+    <div class="glass-card candidate-card">
+        <div class="candidate-card-head">
+            <div class="candidate-info">
+                <div class="candidate-avatar">{{ r.candidate_name[0]|upper }}</div>
+                <div>
+                    <div class="candidate-name">{{ r.candidate_name }}</div>
+                    <div class="candidate-role">{{ r.career_suggestion }}</div>
+                </div>
+            </div>
+            <span class="score-badge {% if r.score >= 80 %}score-high{% elif r.score >= 60 %}score-med{% else %}score-low{% endif %}">
+                {{ r.score }}%
+            </span>
+        </div>
+
+        <div style="border-top:1px solid var(--border-color);padding-top:.75rem;margin-top:.25rem;">
+            <div style="display:flex;gap:1.5rem;font-size:.8rem;color:var(--text-muted);margin-bottom:.85rem;">
+                <span><i class="fas fa-briefcase"></i> {{ r.experience_years }}y exp</span>
+                <span><i class="fas fa-calendar-alt"></i> {{ r.created_at.strftime('%b %d') }}</span>
+                <span><i class="fas fa-robot"></i> ATS {{ r.ats_score }}%</span>
+            </div>
+            <a href="{{ url_for('report', resume_id=r.id) }}" class="btn btn-primary btn-sm" style="width:100%;">
+                <i class="fas fa-chart-pie"></i> View Report
+            </a>
+        </div>
+    </div>
+    {% else %}
+    <div class="glass-card" style="grid-column:span 3;">
+        <div class="empty-state">
+            <div class="empty-state-icon"><i class="fas fa-folder-open"></i></div>
+            <h3>No analyses yet</h3>
+            <p>Upload your first resume above to start getting AI-powered insights.</p>
+            <a href="#upload" class="btn btn-primary" style="margin-top:1.25rem;">
+                <i class="fas fa-upload"></i> Upload Now
+            </a>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if top_skills and top_skills|length > 0 %}
+<!-- ── Skill Trend Section ──────────────────────────────── -->
+<div class="glass-card">
+    <div class="card-header">
+        <div class="card-title"><i class="fas fa-tags"></i> Top Skills in Your Pool</div>
+        <span class="chip chip-teal">Across all analyses</span>
+    </div>
+    <div style="height:250px;position:relative;">
+        <canvas id="skillChart"></canvas>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Pass data to chart engine
+    try { window.chartData = JSON.parse('{{ weekly_data|safe }}'); } catch(e) { window.chartData = []; }
+    {% if top_skills %}
+    try { window.topSkillsData = JSON.parse('{{ top_skills|safe }}'); } catch(e) { window.topSkillsData = []; }
+    {% endif %}
+</script>
+<script src="{{ url_for('static', filename='js/dashboard-upload.js') }}?v=1"></script>
+{% endblock %}

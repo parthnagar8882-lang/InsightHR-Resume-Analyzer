@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+{% block title %}{{ a.original_filename }} — ResumeIQ Pro{% endblock %}
+{% block extra_css %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}"/>
+{% endblock %}
+
+{% block body %}
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+
+<!-- ── Sidebar ─────────────────────────────────────────────────── -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-icon">
+      <span class="material-symbols-outlined icon-fill">analytics</span>
+    </div>
+    <div class="sidebar-logo-text">
+      <h2>ResumeIQ Pro</h2>
+      <p>Intelligent Editorial</p>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <a href="{{ url_for('dashboard') }}">
+      <span class="material-symbols-outlined">dashboard</span><span>Dashboard</span>
+    </a>
+    <a href="{{ url_for('history') }}" class="{{ 'active' if request.endpoint == 'history' }}">
+      <span class="material-symbols-outlined">history</span><span>Analysis History</span>
+    </a>
+    <a href="{{ url_for('dashboard') }}" onclick="setTimeout(()=>document.getElementById('resumeFile') && document.getElementById('resumeFile').click(),200);return true;">
+      <span class="material-symbols-outlined">upload_file</span><span>Upload Resume</span>
+    </a>
+    <a href="{{ url_for('logout') }}" style="color:var(--error);margin-top:auto;">
+      <span class="material-symbols-outlined">logout</span><span>Sign Out</span>
+    </a>
+  </nav>
+  <div class="sidebar-user">
+    <div class="sidebar-user-avatar">{{ current_user.initials() }}</div>
+    <div class="sidebar-user-info">
+      <div class="name">{{ current_user.name }}</div>
+      <div class="role">{{ current_user.email }}</div>
+    </div>
+  </div>
+</aside>
+
+<!-- ── Main Layout ─────────────────────────────────────────────── -->
+<div class="main-layout">
+
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="breadcrumb">
+      <a href="{{ url_for('dashboard') }}" style="color:var(--on-surface-variant);text-decoration:none;display:flex;align-items:center;gap:0.25rem;">
+        <span class="material-symbols-outlined" style="font-size:1rem;">arrow_back</span> Dashboard
+      </a>
+      <span class="sep">·</span>
+      <span class="page" style="max-width:20rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ a.original_filename }}</span>
+    </div>
+    <div class="actions">
+      <button class="theme-toggle" title="Toggle theme">
+        <span class="material-symbols-outlined">dark_mode</span>
+      </button>
+      <div class="sidebar-user-avatar" style="width:2rem;height:2rem;font-size:0.7rem;">{{ current_user.initials() }}</div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content" style="position:relative;z-index:1;max-width:76rem;margin:0 auto;width:100%;">
+
+    <!-- Page Header -->
+    <div class="page-header fade-up" style="margin-bottom:1.75rem;">
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <div>
+          <h1 style="font-size:1.75rem;margin-bottom:0.25rem;">Detailed Analysis Report</h1>
+          <p style="font-size:0.875rem;">Generated {{ a.created_at | timeago }}</p>
+        </div>
+        <div class="info-chips" style="margin-top:0;">
+          <span class="info-chip"><span class="material-symbols-outlined">article</span> {{ a.word_count }} words</span>
+          <span class="info-chip"><span class="material-symbols-outlined">schedule</span> {{ a.created_at.strftime('%b %d, %Y') }}</span>
+          <span class="info-chip
+            {% if a.overall_score >= 80 %}badge-success
+            {% elif a.overall_score >= 60 %}badge-primary
+            {% elif a.overall_score >= 40 %}badge-warning
+            {% else %}badge-error{% endif %}">
+            <span class="material-symbols-outlined">star</span> {{ a.score_label }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Hero: Score + Skill Bars ──────────────────────────── -->
+    <div class="analysis-hero fade-up fade-up-1">
+
+      <!-- Score Card -->
+      <div class="score-card">
+        <div class="score-meta">Overall Resume Score</div>
+        {% set circumference = 2 * 3.14159 * 88 %}
+        <div class="score-circle">
+          <svg width="176" height="176" viewBox="0 0 176 176">
+            <circle cx="88" cy="88" r="88" fill="none"
+                    stroke="var(--surface-container-highest)" stroke-width="12"/>
+            <circle cx="88" cy="88" r="88" fill="none"
+                    class="score-ring"
+                    stroke="{% if a.overall_score >= 80 %}var(--secondary){% elif a.overall_score >= 60 %}var(--primary){% elif a.overall_score >= 40 %}var(--tertiary){% else %}var(--error){% endif %}"
+                    stroke-width="12"
+                    stroke-linecap="round"
+                    data-score="{{ a.overall_score }}"
+                    style="filter:drop-shadow(0 0 10px {% if a.overall_score >= 80 %}rgba(0,110,42,0.4){% elif a.overall_score >= 60 %}rgba(15,56,237,0.4){% else %}rgba(117,76,0,0.4){% endif %});"/>
+          </svg>
+          <div class="score-circle-inner">
+            <div class="score-num
+              {% if a.overall_score >= 80 %}score-outstanding{% elif a.overall_score >= 60 %}score-excellent{% elif a.overall_score >= 40 %}score-good{% else %}score-fair{% endif %}">
+              <span data-count="{{ a.overall_score }}">0</span><span class="score-pct">%</span>
+            </div>
+            <div class="score-label text-muted">{{ a.score_label }}</div>
+          </div>
+        </div>
+
+        <!-- ATS Score -->
+        <div class="ats-hero-score">
+          <div class="ats-icon">
+            <span class="material-symbols-outlined icon-fill">verified</span>
+          </div>
+          <div>
+            <div class="ats-score-val">{{ a.ats_score }}%</div>
+            <div class="ats-score-label">ATS Compatibility Score</div>
+          </div>
+          <div style="margin-left:auto;">
+            <div class="progress-bar" style="width:7rem;">
+              <div class="skill-bar-fill ats" data-width="{{ a.ats_score }}" style="width:0;"></div>
+            </div>
+          </div>
+        </div>
+
+        <p class="score-sublabel">
+          {% if a.overall_score >= 80 %}
+            Outstanding! Your resume is highly optimized and ready for top-tier applications.
+          {% elif a.overall_score >= 60 %}
+            Strong profile with room to grow. Review the gap analysis below.
+          {% elif a.overall_score >= 40 %}
+            Good foundation. Apply the suggestions below to significantly boost your score.
+          {% else %}
+            Your resume needs significant work. Follow the optimization guide below.
+          {% endif %}
+        </p>
+      </div>
+
+      <!-- Skill Alignment Chart -->
+      <div class="skills-chart-card">
+        <div class="chart-header">
+          <div>
+            <h2 style="font-size:1.25rem;margin-bottom:0.25rem;">Skill Profile Alignment</h2>
+            <p style="font-size:0.8rem;color:var(--on-surface-variant);">Your competencies vs. industry benchmarks</p>
+          </div>
+          <div class="chart-legend">
+            <span><span class="legend-dot" style="background:var(--primary);"></span>Your Skills</span>
+            <span><span class="legend-dot" style="background:var(--surface-container-highest);"></span>Market Avg</span>
+          </div>
+        </div>
+
+        {% for cat, score in a.skill_scores.items() %}
+        <div class="skill-bar-row">
+          <div class="skill-bar-label">
+            <span>{{ cat }}</span>
+            <span>{{ score }}%</span>
+          </div>
+          <div class="skill-bar-track">
+            <div class="skill-bar-fill" data-width="{{ score }}" style="width:0;"></div>
+          </div>
+        </div>
+        {% endfor %}
+
+        {% if not a.skill_scores %}
+        <div style="text-align:center;padding:2rem;color:var(--on-surface-variant);">
+          No skill scores available. Upload a resume with clear skill mentions.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ── Detected Skills ──────────────────────────────────── -->
+    {% if a.skills %}
+    <div class="card fade-up fade-up-2" style="margin-bottom:1.5rem;">
+      <div class="section-header" style="margin-bottom:1.25rem;">
+        <h3>Detected Skills ({{ a.skills|length }})</h3>
+        <span class="badge badge-success">AI Extracted</span>
+      </div>
+      <div class="skills-wrap" style="gap:0.5rem;">
+        {% for skill in a.skills %}
+          <span class="tag">{{ skill }}</span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Skill Gaps + Career Paths ────────────────────────── -->
+    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:1.5rem;margin-bottom:1.5rem;" class="fade-up fade-up-3">
+
+      <!-- Skill Gaps -->
+      <div class="card">
+        <div class="section-header" style="margin-bottom:1.25rem;">
+          <h3>
+            <span style="display:inline-flex;align-items:center;gap:0.5rem;">
+              <span style="width:2rem;height:2rem;border-radius:0.5rem;background:var(--tertiary-fixed);color:var(--on-tertiary-fixed-variant);display:inline-flex;align-items:center;justify-content:center;">
+                <span class="material-symbols-outlined" style="font-size:1rem;">psychology_alt</span>
+              </span>
+              Skill Gap Analysis
+            </span>
+          </h3>
+        </div>
+        {% if a.gaps %}
+          <div class="gaps-grid" style="grid-template-columns:1fr;">
+            {% for gap in a.gaps %}
+            <div class="gap-card">
+              <div class="gap-header">
+                <span class="badge badge-{{ gap.priority|lower }}">{{ gap.priority }}</span>
+                <span class="material-symbols-outlined" style="color:var(--outline-variant);">trending_up</span>
+              </div>
+              <h4>{{ gap.skill }}</h4>
+              <p class="reason">{{ gap.reason }}</p>
+              <div class="action-link">
+                <span class="material-symbols-outlined" style="font-size:0.9rem;">lightbulb</span>
+                {{ gap.action }}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state" style="padding:2rem;">
+            <span class="material-symbols-outlined" style="color:var(--secondary);">check_circle</span>
+            <div><strong>No critical gaps found!</strong><br/>Your resume covers all major skill areas.</div>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Career Paths -->
+      <div class="card">
+        <div class="section-header" style="margin-bottom:1.25rem;">
+          <h3>Career Path Matches</h3>
+        </div>
+        {% if a.career_paths %}
+          <div style="display:flex;flex-direction:column;gap:0.75rem;">
+            {% for cp in a.career_paths %}
+            <div class="career-path-item">
+              <div class="cp-icon">
+                <span class="material-symbols-outlined">{{ cp.icon }}</span>
+              </div>
+              <div class="cp-details">
+                <div class="cp-title">{{ cp.title }}</div>
+                <div class="cp-cat">{{ cp.category }}</div>
+              </div>
+              <div class="cp-score">{{ cp.score }}%</div>
+            </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- ── Strengths ─────────────────────────────────────────── -->
+    {% if a.strengths %}
+    <div class="card fade-up fade-up-3" style="margin-bottom:1.5rem;">
+      <div class="section-header" style="margin-bottom:1.25rem;">
+        <h3>🏆 Your Strengths</h3>
+      </div>
+      {% for s in a.strengths %}
+      <div class="strength-row">
+        <div class="strength-icon">
+          <span class="material-symbols-outlined icon-fill">verified</span>
+        </div>
+        <div class="strength-info">
+          <h5>{{ s.category }}</h5>
+          <p>{{ s.message }}</p>
+          {% if s.detected %}
+          <div class="skills-wrap" style="margin-top:0.5rem;gap:0.35rem;">
+            {% for skill in s.detected %}
+              <span class="tag" style="font-size:0.65rem;">{{ skill }}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+        <div class="strength-score">{{ s.score }}%</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ── Optimization Tips ───────────────────────────────── -->
+    {% if a.suggestions %}
+    <div class="opt-panel fade-up fade-up-4" style="margin-bottom:1.5rem;">
+      <div class="opt-brand">
+        <div>
+          <span class="label">Editorial Insight</span>
+          <h3>Optimization Protocols</h3>
+          <p>Based on analysis of 10,000+ successful placements. Apply these to boost your score significantly.</p>
+        </div>
+      </div>
+      <div class="opt-content">
+        <div style="display:flex;flex-direction:column;gap:0.875rem;">
+          {% for tip in a.suggestions %}
+          <div class="suggestion-item">
+            <div class="suggestion-icon">
+              <span class="material-symbols-outlined">{{ tip.icon }}</span>
+            </div>
+            <div class="suggestion-content">
+              <div class="suggestion-cat">{{ tip.category }}</div>
+              <h5>{{ tip.tip }}</h5>
+              <p>{{ tip.detail }}</p>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ── Action Footer ─────────────────────────────────────── -->
+    <div class="action-footer fade-up fade-up-5">
+      <div class="footer-info">
+        <h5>Analysis Complete</h5>
+        <p>Generated {{ a.created_at.strftime('%B %d, %Y at %H:%M') }} · ResumeIQ Pro v2.0 AI Engine</p>
+      </div>
+      <div style="display:flex;gap:0.875rem;flex-wrap:wrap;">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">
+          <span class="material-symbols-outlined">upload</span>
+          Analyze Another
+        </a>
+        <a href="{{ url_for('history') }}" class="btn btn-secondary">
+          <span class="material-symbols-outlined">history</span>
+          View History
+        </a>
+        <form method="POST" action="{{ url_for('delete_analysis', analysis_id=a.id) }}" style="display:inline;" onsubmit="return confirm('Delete this analysis? This cannot be undone.');">
+          <button type="submit" class="btn btn-danger">
+            <span class="material-symbols-outlined">delete</span>
+            Delete
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </main>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/analysis.js') }}"></script>
+{% endblock %}
